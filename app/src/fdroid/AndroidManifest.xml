@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.geeksville.mesh"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="GoogleAppIndexingWarning">
+
+    <!-- hardware acceleration is required for zxing barcode lib -->
+    <application>
+        <meta-data android:name="com.mapbox.EnableEvents" android:value="false" />
+    </application>
+
+</manifest>
