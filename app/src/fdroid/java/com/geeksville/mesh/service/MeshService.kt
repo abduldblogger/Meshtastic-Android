@@ -11,14 +11,12 @@ import android.os.RemoteException
 import android.widget.Toast
 import androidx.annotation.UiThread
 import androidx.core.content.edit
-import com.geeksville.android.GeeksvilleApplication
 import com.geeksville.android.Logging
 import com.geeksville.android.ServiceClient
 import com.geeksville.concurrent.handledLaunch
 import com.geeksville.mesh.*
 import com.geeksville.mesh.MeshProtos.MeshPacket
 import com.geeksville.mesh.MeshProtos.ToRadio
-import com.geeksville.mesh.android.hasBackgroundPermission
 import com.geeksville.mesh.database.MeshtasticDatabase
 import com.geeksville.mesh.database.PacketRepository
 import com.geeksville.mesh.database.entity.Packet

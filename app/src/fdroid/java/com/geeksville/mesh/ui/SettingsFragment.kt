@@ -38,6 +38,9 @@ import com.geeksville.mesh.android.bluetoothManager
 import com.geeksville.mesh.android.hasLocationPermission
 import com.geeksville.mesh.android.hasBackgroundPermission
 import com.geeksville.mesh.android.usbManager
+import com.geeksville.mesh.base.helper.MeshServiceHelper
+import com.geeksville.mesh.base.helper.MeshServiceHelper.Companion.changeDeviceAddress
+import com.geeksville.mesh.base.helper.MeshServiceHelperImp
 import com.geeksville.mesh.databinding.SettingsFragmentBinding
 import com.geeksville.mesh.model.UIViewModel
 import com.geeksville.mesh.service.*
@@ -61,7 +64,7 @@ object SLogging : Logging
 fun changeDeviceSelection(context: MainActivity, newAddr: String?) {
     // FIXME, this is a kinda yucky way to find the service
     context.model.meshService?.let { service ->
-        MeshService.changeDeviceAddress(context, service, newAddr)
+        MeshServiceHelper.changeDeviceAddress(context, service, newAddr)
     }
 }
 

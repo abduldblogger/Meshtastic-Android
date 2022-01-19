@@ -45,6 +45,8 @@ import com.geeksville.mesh.android.getLocationPermissions
 import com.geeksville.mesh.android.getBackgroundPermissions
 import com.geeksville.mesh.android.getCameraPermissions
 import com.geeksville.mesh.android.getMissingPermissions
+import com.geeksville.mesh.base.helper.MeshServiceHelper
+import com.geeksville.mesh.base.helper.MeshServiceHelperImp
 import com.geeksville.mesh.database.entity.Packet
 import com.geeksville.mesh.databinding.ActivityMainBinding
 import com.geeksville.mesh.model.ChannelSet
@@ -356,7 +358,7 @@ class MainActivity : AppCompatActivity(), Logging,
             DID_REQUEST_PERM -> {
                 // If request is cancelled, the result arrays are empty.
                 if ((grantResults.isNotEmpty() &&
-                        grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                            grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 ) {
                     // Permission is granted. Continue the action or workflow
                     // in your app.
@@ -577,7 +579,11 @@ class MainActivity : AppCompatActivity(), Logging,
 
                     // ... Continue interacting with the paired device.
                     model.meshService?.let { service ->
-                        MeshService.changeDeviceAddress(this@MainActivity, service, device.address)
+                        MeshServiceHelper.changeDeviceAddress(
+                            this@MainActivity,
+                            service,
+                            device.address
+                        )
                     }
                 }
 

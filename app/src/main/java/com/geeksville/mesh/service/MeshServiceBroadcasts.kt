@@ -5,11 +5,13 @@ import android.content.Intent
 import android.os.Parcelable
 import com.geeksville.mesh.DataPacket
 import com.geeksville.mesh.NodeInfo
+import com.geeksville.mesh.base.helper.MeshServiceHelper
+import com.geeksville.mesh.base.helper.MeshServiceHelperImp
 
 class MeshServiceBroadcasts(
     private val context: Context,
     private val clientPackages: MutableMap<String, String>,
-    private val getConnectionState: () -> MeshService.ConnectionState
+    private val getConnectionState: () -> MeshServiceHelper.ConnectionState
 ) {
     /**
      * Broadcast some received data
@@ -18,7 +20,7 @@ class MeshServiceBroadcasts(
     fun broadcastReceivedData(payload: DataPacket) {
 
         explicitBroadcast(
-            Intent(MeshService.actionReceived(payload.dataType)).putExtra(
+            Intent(MeshServiceHelperImp.actionReceived(payload.dataType)).putExtra(
                 EXTRA_PAYLOAD,
                 payload
             )
@@ -34,7 +36,7 @@ class MeshServiceBroadcasts(
 
     fun broadcastNodeChange(info: NodeInfo) {
         MeshService.debug("Broadcasting node change $info")
-        val intent = Intent(MeshService.ACTION_NODE_CHANGE).putExtra(EXTRA_NODEINFO, info)
+        val intent = Intent(MeshServiceHelperImp.ACTION_NODE_CHANGE).putExtra(EXTRA_NODEINFO, info)
         explicitBroadcast(intent)
     }
 
@@ -44,7 +46,7 @@ class MeshServiceBroadcasts(
         } else {
             // Do not log, contains PII possibly
             // MeshService.debug("Broadcasting message status $p")
-            val intent = Intent(MeshService.ACTION_MESSAGE_STATUS).apply {
+            val intent = Intent(MeshServiceHelperImp.ACTION_MESSAGE_STATUS).apply {
                 putExtra(EXTRA_PACKET_ID, p.id)
                 putExtra(EXTRA_STATUS, p.status as Parcelable)
             }
@@ -56,7 +58,7 @@ class MeshServiceBroadcasts(
      * Broadcast our current connection status
      */
     fun broadcastConnection() {
-        val intent = Intent(MeshService.ACTION_MESH_CONNECTED).putExtra(
+        val intent = Intent(MeshServiceHelperImp.ACTION_MESH_CONNECTED).putExtra(
             EXTRA_CONNECTED,
             getConnectionState().toString()
         )
