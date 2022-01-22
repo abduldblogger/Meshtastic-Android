@@ -1498,3 +1498,6 @@ class MeshServiceHelperImp(
 //        }
     }
 }
+fun updateNodeInfoTime(it: NodeInfo, rxTime: Int) {
+    it.lastHeard = rxTime
+}

@@ -39,8 +39,8 @@ import com.geeksville.mesh.android.hasLocationPermission
 import com.geeksville.mesh.android.hasBackgroundPermission
 import com.geeksville.mesh.android.usbManager
 import com.geeksville.mesh.base.helper.MeshServiceHelper
-import com.geeksville.mesh.base.helper.MeshServiceHelper.Companion.changeDeviceAddress
 import com.geeksville.mesh.base.helper.MeshServiceHelperImp
+import com.geeksville.mesh.common.MeshServiceCompanion
 import com.geeksville.mesh.databinding.SettingsFragmentBinding
 import com.geeksville.mesh.model.UIViewModel
 import com.geeksville.mesh.service.*
@@ -64,7 +64,7 @@ object SLogging : Logging
 fun changeDeviceSelection(context: MainActivity, newAddr: String?) {
     // FIXME, this is a kinda yucky way to find the service
     context.model.meshService?.let { service ->
-        MeshServiceHelper.changeDeviceAddress(context, service, newAddr)
+        MeshServiceCompanion.changeDeviceAddress(context, service, newAddr)
     }
 }
 
@@ -674,10 +674,9 @@ class SettingsFragment : ScreenFragment("Settings"), Logging {
 
                     if (view.isChecked)
                         model.provideLocation.value = isChecked
-                        model.meshService?.setupProvideLocation()
+                    model.meshService?.setupProvideLocation()
                 }
-            }
-            else {
+            } else {
                 model.provideLocation.value = isChecked
                 model.meshService?.stopProvideLocation()
             }

@@ -5,23 +5,25 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.os.IBinder
-import android.os.RemoteException
 import androidx.annotation.UiThread
 import com.geeksville.analytics.DataPair
 import com.geeksville.android.GeeksvilleApplication
 import com.geeksville.android.Logging
 import com.geeksville.android.ServiceClient
 import com.geeksville.android.isGooglePlayAvailable
-import com.geeksville.mesh.*
-import com.geeksville.mesh.MeshProtos.MeshPacket
-import com.geeksville.mesh.MeshProtos.ToRadio
+import com.geeksville.mesh.DataPacket
+import com.geeksville.mesh.IRadioInterfaceService
+import com.geeksville.mesh.MeshProtos
+import com.geeksville.mesh.RadioConfigProtos
 import com.geeksville.mesh.android.hasBackgroundPermission
 import com.geeksville.mesh.base.helper.MeshServiceHelper
 import com.geeksville.mesh.base.helper.MeshServiceHelperImp
-import com.geeksville.mesh.common.MeshServiceCompanion
+import com.geeksville.mesh.common.MeshServiceBinder
 import com.geeksville.mesh.common.RadioInterfaceBroadcastReceiver
 import com.geeksville.mesh.database.PacketRepository
-import com.geeksville.util.*
+import com.geeksville.util.Exceptions
+import com.geeksville.util.exceptionReporter
+import com.geeksville.util.ignoreException
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -47,6 +49,11 @@ class MeshService : Service() {
             // Now that we are connected to the radio service, tell it to connect to the radio
             connect()
         }
+    }
+
+    fun getRadioServiceClient()
+            : ServiceClient<IRadioInterfaceService> {
+        return radio
     }
 
     private val locationCallback = MeshServiceLocationCallback(
@@ -165,15 +172,6 @@ class MeshService : Service() {
         return connectedRadio
     }
 
-    /**
-     * Send a mesh packet to the radio, if the radio is not currently connected this function will throw NotConnectedException
-     */
-    private fun sendToRadio(packet: MeshPacket, requireConnected: Boolean = true) {
-        meshServiceHelper.sendToRadio(ToRadio.newBuilder().apply {
-            this.packet = packet
-        }, requireConnected)
-    }
-
     override fun onCreate() {
         super.onCreate()
 
@@ -220,7 +218,7 @@ class MeshService : Service() {
         meshServiceHelper.cancelServiceJob()
     }
 
-    private fun setupLocationRequests() {
+    fun setupLocationRequests() {
         stopLocationRequests()
         val mi = meshServiceHelper.getNodeInfo()
         val prefs = meshServiceHelper.getRadioConfig()?.preferences
@@ -308,147 +306,7 @@ class MeshService : Service() {
         }
     }
 
-    private val binder = object : IMeshService.Stub() {
-
-        override fun setDeviceAddress(deviceAddr: String?) = toRemoteExceptions {
-            debug("Passing through device change to radio service: ${deviceAddr.anonymize}")
-
-            val res = radio.service.setDeviceAddress(deviceAddr)
-            if (res) {
-                meshServiceHelper.discardNodeDB()
-            }
-            res
-        }
-
-        // Note: bound methods don't get properly exception caught/logged, so do that with a wrapper
-        // per https://blog.classycode.com/dealing-with-exceptions-in-aidl-9ba904c6d63
-        override fun subscribeReceiver(packageName: String, receiverName: String) =
-            toRemoteExceptions {
-                meshServiceHelper.setClientPackages(receiverName, packageName)
-            }
-
-        override fun getOldMessages(): MutableList<DataPacket> {
-            return meshServiceHelper.getRecentDataPackets()
-        }
-
-        override fun getUpdateStatus(): Int = SoftwareUpdateService.progress
-        override fun getRegion(): Int = meshServiceHelper.getCurrentRegionValue()
-
-        override fun setRegion(regionCode: Int) = toRemoteExceptions {
-            meshServiceHelper.setCurrentRegionValue(regionCode)
-            meshServiceHelper.setRegionOnDevice()
-        }
-
-        override fun startFirmwareUpdate() = toRemoteExceptions {
-            meshServiceHelper.doFirmwareUpdate()
-        }
-
-        override fun getMyNodeInfo(): MyNodeInfo? = meshServiceHelper.getNodeInfo()
-
-        override fun getMyId() = toRemoteExceptions { meshServiceHelper.getMyNodeId() }
-
-        override fun setOwner(myId: String?, longName: String, shortName: String) =
-            toRemoteExceptions {
-                meshServiceHelper.setOwner(myId, longName, shortName)
-            }
-
-        override fun send(p: DataPacket) {
-            toRemoteExceptions {
-                // Init from and id
-                meshServiceHelper.getMyNodeId()?.let { myId ->
-                    // we no longer set from, we let the device do it
-                    //if (p.from == DataPacket.ID_LOCAL)
-                    //    p.from = myId
-
-                    if (p.id == 0)
-                        p.id = meshServiceHelper.generatePacketId()
-                }
-
-                info("sendData dest=${p.to}, id=${p.id} <- ${p.bytes!!.size} bytes (connectionState=${meshServiceHelper.getConnectionState()})")
-
-                if (p.dataType == 0)
-                    throw Exception("Port numbers must be non-zero!") // we are now more strict
-
-                // Keep a record of datapackets, so GUIs can show proper chat history
-                meshServiceHelper.rememberDataPacket(p)
-
-                if (p.bytes.size >= MeshProtos.Constants.DATA_PAYLOAD_LEN.number) {
-                    p.status = MessageStatus.ERROR
-                    throw RemoteException("Message too long")
-                }
-
-                if (p.id != 0) { // If we have an ID we can wait for an ack or nak
-                    meshServiceHelper.deleteOldPackets()
-                    meshServiceHelper.setSentPackets(p)
-                }
-
-                // If radio is sleeping or disconnected, queue the packet
-                when (meshServiceHelper.getConnectionState()) {
-                    MeshServiceHelper.ConnectionState.CONNECTED ->
-                        try {
-                            meshServiceHelper.sendNow(p)
-                        } catch (ex: Exception) {
-                            // This can happen if a user is unlucky and the device goes to sleep after the GUI starts a send, but before we update connectionState
-                            errormsg("Error sending message, so enqueueing", ex)
-                            meshServiceHelper.enqueueForSending(p)
-                        }
-                    else -> // sleeping or disconnected
-                        meshServiceHelper.enqueueForSending(p)
-                }
-
-                GeeksvilleApplication.analytics.track(
-                    "data_send",
-                    DataPair("num_bytes", p.bytes.size),
-                    DataPair("type", p.dataType)
-                )
-
-                GeeksvilleApplication.analytics.track(
-                    "num_data_sent",
-                    DataPair(1)
-                )
-            }
-        }
-
-        override fun getRadioConfig(): ByteArray = toRemoteExceptions {
-            meshServiceHelper.getRadioConfig()?.toByteArray()
-                ?: throw MeshServiceCompanion.Companion.NoRadioConfigException()
-        }
-
-        override fun setRadioConfig(payload: ByteArray) = toRemoteExceptions {
-            meshServiceHelper.setRadioConfig(payload)
-        }
-
-        override fun getChannels(): ByteArray = toRemoteExceptions {
-            meshServiceHelper.getChannelSets().toByteArray()
-        }
-
-        override fun setChannels(payload: ByteArray?) = toRemoteExceptions {
-            val parsed = AppOnlyProtos.ChannelSet.parseFrom(payload)
-            meshServiceHelper.setChannelSets(parsed)
-        }
-
-        override fun getNodes(): MutableList<NodeInfo> = toRemoteExceptions {
-            val r = meshServiceHelper.getNodeDBByID().values.toMutableList()
-            info("in getOnline, count=${r.size}")
-            // return arrayOf("+16508675309")
-            r
-        }
-
-        override fun connectionState(): String = toRemoteExceptions {
-            val r = meshServiceHelper.getConnectionState()
-            info("in connectionState=$r")
-            r.toString()
-        }
-
-        override fun setupProvideLocation() = toRemoteExceptions {
-            setupLocationRequests()
-        }
-
-        override fun stopProvideLocation() = toRemoteExceptions {
-            stopLocationRequests()
-        }
-
-    }
+    private val binder = MeshServiceBinder(meshServiceHelper, this)
 
     fun getRadioInterfaceReceiver(): BroadcastReceiver {
         return radioInterfaceReceiver
@@ -456,8 +314,4 @@ class MeshService : Service() {
 
 
     companion object : Logging
-}
-
-fun updateNodeInfoTime(it: NodeInfo, rxTime: Int) {
-    it.lastHeard = rxTime
 }
