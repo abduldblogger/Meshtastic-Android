@@ -477,18 +477,21 @@ class MainActivity : AppCompatActivity(), Logging,
         supportActionBar?.setDisplayShowTitleEnabled(false)
     }
 
-    private fun updateConnectionStatusImage(connected: MeshService.ConnectionState) {
+    private fun updateConnectionStatusImage(connected: MeshServiceHelper.ConnectionState) {
 
         if (model.actionBarMenu == null)
             return
 
         val (image, tooltip) = when (connected) {
-            MeshService.ConnectionState.CONNECTED -> Pair(R.drawable.cloud_on, R.string.connected)
-            MeshService.ConnectionState.DEVICE_SLEEP -> Pair(
+            MeshServiceHelper.ConnectionState.CONNECTED -> Pair(
+                R.drawable.cloud_on,
+                R.string.connected
+            )
+            MeshServiceHelper.ConnectionState.DEVICE_SLEEP -> Pair(
                 R.drawable.ic_twotone_cloud_upload_24,
                 R.string.device_sleeping
             )
-            MeshService.ConnectionState.DISCONNECTED -> Pair(
+            MeshServiceHelper.ConnectionState.DISCONNECTED -> Pair(
                 R.drawable.cloud_off,
                 R.string.disconnected
             )
@@ -522,7 +525,7 @@ class MainActivity : AppCompatActivity(), Logging,
                 requestedChannelUrl = appLinkData
 
                 // if the device is connected already, process it now
-                if (model.isConnected.value == MeshService.ConnectionState.CONNECTED)
+                if (model.isConnected.value == MeshServiceHelper.ConnectionState.CONNECTED)
                     perhapsChangeChannel()
 
                 // We now wait for the device to connect, once connected, we ask the user if they want to switch to the new channel
@@ -676,10 +679,10 @@ class MainActivity : AppCompatActivity(), Logging,
     }
 
     /// Called when we gain/lose a connection to our mesh radio
-    private fun onMeshConnectionChanged(connected: MeshService.ConnectionState) {
+    private fun onMeshConnectionChanged(connected: MeshServiceHelper.ConnectionState) {
         debug("connchange ${model.isConnected.value} -> $connected")
 
-        if (connected == MeshService.ConnectionState.CONNECTED) {
+        if (connected == MeshServiceHelper.ConnectionState.CONNECTED) {
             model.meshService?.let { service ->
 
                 val oldConnection = model.isConnected.value
@@ -833,7 +836,7 @@ class MainActivity : AppCompatActivity(), Logging,
                     MeshService.ACTION_MESH_CONNECTED -> {
                         val extra = intent.getStringExtra(EXTRA_CONNECTED)
                         if (extra != null) {
-                            onMeshConnectionChanged(MeshService.ConnectionState.valueOf(extra))
+                            onMeshConnectionChanged(MeshServiceHelper.ConnectionState.valueOf(extra))
                         }
                     }
                     else -> TODO()
@@ -908,11 +911,11 @@ class MainActivity : AppCompatActivity(), Logging,
 
                     model.messagesState.setMessages(msgs)
                     val connectionState =
-                        MeshService.ConnectionState.valueOf(service.connectionState())
+                        MeshServiceHelper.ConnectionState.valueOf(service.connectionState())
 
                     // if we are not connected, onMeshConnectionChange won't fetch nodes from the service
                     // in that case, we do it here - because the service certainly has a better idea of node db that we have
-                    if (connectionState != MeshService.ConnectionState.CONNECTED)
+                    if (connectionState != MeshServiceHelper.ConnectionState.CONNECTED)
                         updateNodesFromDevice()
 
                     // We won't receive a notify for the initial state of connection, so we force an update here
@@ -921,7 +924,7 @@ class MainActivity : AppCompatActivity(), Logging,
                     // If we get an exception while reading our service config, the device might have gone away, double check to see if we are really connected
                     errormsg("Device error during init ${ex.message}")
                     model.isConnected.value =
-                        MeshService.ConnectionState.valueOf(service.connectionState())
+                        MeshServiceHelper.ConnectionState.valueOf(service.connectionState())
                 } finally {
                     connectionJob = null
                 }

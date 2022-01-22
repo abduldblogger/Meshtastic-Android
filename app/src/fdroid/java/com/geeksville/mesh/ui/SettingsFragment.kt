@@ -495,7 +495,7 @@ class SettingsFragment : ScreenFragment("Settings"), Logging {
         debug("Reiniting the update button")
         val info = model.myNodeInfo.value
         val service = model.meshService
-        if (model.isConnected.value == MeshService.ConnectionState.CONNECTED && info != null && info.shouldUpdate && info.couldUpdate && service != null) {
+        if (model.isConnected.value == MeshServiceHelper.ConnectionState.CONNECTED && info != null && info.shouldUpdate && info.couldUpdate && service != null) {
             binding.updateFirmwareButton.visibility = View.VISIBLE
             binding.updateFirmwareButton.text =
                 getString(R.string.update_to).format(getString(R.string.short_firmware_version))
@@ -503,7 +503,7 @@ class SettingsFragment : ScreenFragment("Settings"), Logging {
             val progress = service.updateStatus
 
             binding.updateFirmwareButton.isEnabled = enable &&
-                (progress < 0) // if currently doing an upgrade disable button
+                    (progress < 0) // if currently doing an upgrade disable button
 
             if (progress >= 0) {
                 binding.updateProgressBar.progress = progress // update partial progress
@@ -538,10 +538,10 @@ class SettingsFragment : ScreenFragment("Settings"), Logging {
     private fun updateNodeInfo() {
         val connected = model.isConnected.value
 
-        val isConnected = connected == MeshService.ConnectionState.CONNECTED
+        val isConnected = connected == MeshServiceHelper.ConnectionState.CONNECTED
         binding.nodeSettings.visibility = if (isConnected) View.VISIBLE else View.GONE
 
-        if (connected == MeshService.ConnectionState.DISCONNECTED)
+        if (connected == MeshServiceHelper.ConnectionState.DISCONNECTED)
             model.ownerName.value = ""
 
         // update the region selection from the device
@@ -574,13 +574,13 @@ class SettingsFragment : ScreenFragment("Settings"), Logging {
             region == RadioConfigProtos.RegionCode.Unset ->
                 statusText.text = getString(R.string.must_set_region)
 
-            connected == MeshService.ConnectionState.CONNECTED -> {
+            connected == MeshServiceHelper.ConnectionState.CONNECTED -> {
                 val fwStr = info?.firmwareString ?: "unknown"
                 statusText.text = getString(R.string.connected_to).format(fwStr)
             }
-            connected == MeshService.ConnectionState.DISCONNECTED ->
+            connected == MeshServiceHelper.ConnectionState.DISCONNECTED ->
                 statusText.text = getString(R.string.not_connected)
-            connected == MeshService.ConnectionState.DEVICE_SLEEP ->
+            connected == MeshServiceHelper.ConnectionState.DEVICE_SLEEP ->
                 statusText.text = getString(R.string.connected_sleeping)
         }
     }
@@ -774,7 +774,7 @@ class SettingsFragment : ScreenFragment("Settings"), Logging {
                     )
                     addDeviceButton(
                         curDevice,
-                        model.isConnected.value == MeshService.ConnectionState.CONNECTED
+                        model.isConnected.value == MeshServiceHelper.ConnectionState.CONNECTED
                     )
                 }
             } else if (scanModel.selectedUSB != null) {

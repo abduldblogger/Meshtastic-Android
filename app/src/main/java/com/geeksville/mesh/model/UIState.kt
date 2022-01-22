@@ -15,10 +15,10 @@ import com.geeksville.android.Logging
 import com.geeksville.mesh.IMeshService
 import com.geeksville.mesh.MyNodeInfo
 import com.geeksville.mesh.RadioConfigProtos
+import com.geeksville.mesh.base.helper.MeshServiceHelper
 import com.geeksville.mesh.database.MeshtasticDatabase
 import com.geeksville.mesh.database.PacketRepository
 import com.geeksville.mesh.database.entity.Packet
-import com.geeksville.mesh.service.MeshService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -85,7 +85,7 @@ class UIViewModel(private val app: Application) : AndroidViewModel(app), Logging
     /// Are we connected to our radio device
     val isConnected =
         object :
-            MutableLiveData<MeshService.ConnectionState>(MeshService.ConnectionState.DISCONNECTED) {
+            MutableLiveData<MeshServiceHelper.ConnectionState>(MeshServiceHelper.ConnectionState.DISCONNECTED) {
         }
 
     /// various radio settings (including the channel)

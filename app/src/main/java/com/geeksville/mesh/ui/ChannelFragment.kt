@@ -23,12 +23,12 @@ import com.geeksville.mesh.ChannelProtos
 import com.geeksville.mesh.MainActivity
 import com.geeksville.mesh.R
 import com.geeksville.mesh.android.hasCameraPermission
+import com.geeksville.mesh.base.helper.MeshServiceHelper
 import com.geeksville.mesh.databinding.ChannelFragmentBinding
 import com.geeksville.mesh.model.Channel
 import com.geeksville.mesh.model.ChannelOption
 import com.geeksville.mesh.model.ChannelSet
 import com.geeksville.mesh.model.UIViewModel
-import com.geeksville.mesh.service.MeshService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.protobuf.ByteString
@@ -89,7 +89,7 @@ class ChannelFragment : ScreenFragment("Channel"), Logging {
         val channels = model.channels.value
         val channel = channels?.primaryChannel
 
-        val connected = model.isConnected.value == MeshService.ConnectionState.CONNECTED
+        val connected = model.isConnected.value == MeshServiceHelper.ConnectionState.CONNECTED
 
         // Only let buttons work if we are connected to the radio
         binding.shareButton.isEnabled = connected

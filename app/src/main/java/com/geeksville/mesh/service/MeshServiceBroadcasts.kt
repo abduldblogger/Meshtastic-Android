@@ -7,6 +7,7 @@ import com.geeksville.mesh.DataPacket
 import com.geeksville.mesh.NodeInfo
 import com.geeksville.mesh.base.helper.MeshServiceHelper
 import com.geeksville.mesh.base.helper.MeshServiceHelperImp
+import com.geeksville.mesh.common.IntentUtil
 
 class MeshServiceBroadcasts(
     private val context: Context,
@@ -20,7 +21,7 @@ class MeshServiceBroadcasts(
     fun broadcastReceivedData(payload: DataPacket) {
 
         explicitBroadcast(
-            Intent(MeshServiceHelperImp.actionReceived(payload.dataType)).putExtra(
+            Intent(IntentUtil.getBroadCastIntent(payload.dataType)).putExtra(
                 EXTRA_PAYLOAD,
                 payload
             )

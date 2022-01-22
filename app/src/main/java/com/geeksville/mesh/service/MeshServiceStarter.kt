@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import androidx.work.*
 import com.geeksville.andlib.BuildConfig
+import com.geeksville.mesh.common.IntentUtil
 import java.util.concurrent.TimeUnit
 
 /**
@@ -27,7 +28,7 @@ class ServiceStarter(
 }
 
 private fun Context.startMeshService(): ComponentName? {
-    val intent = MeshService.createIntent()
+    val intent = IntentUtil.getMeshIntent()
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         startForegroundService(intent)
     } else {

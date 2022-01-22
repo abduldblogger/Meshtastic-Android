@@ -41,10 +41,14 @@ import com.geeksville.android.GeeksvilleApplication
 import com.geeksville.android.Logging
 import com.geeksville.android.ServiceClient
 import com.geeksville.concurrent.handledLaunch
-import com.geeksville.mesh.android.getLocationPermissions
 import com.geeksville.mesh.android.getBackgroundPermissions
 import com.geeksville.mesh.android.getCameraPermissions
+import com.geeksville.mesh.android.getLocationPermissions
 import com.geeksville.mesh.android.getMissingPermissions
+import com.geeksville.mesh.base.helper.MeshServiceHelper
+import com.geeksville.mesh.base.helper.MeshServiceHelperImp
+import com.geeksville.mesh.common.IntentUtil
+import com.geeksville.mesh.common.MeshServiceCompanion
 import com.geeksville.mesh.database.entity.Packet
 import com.geeksville.mesh.databinding.ActivityMainBinding
 import com.geeksville.mesh.model.ChannelSet
@@ -363,7 +367,7 @@ class MainActivity : AppCompatActivity(), Logging,
             DID_REQUEST_PERM -> {
                 // If request is cancelled, the result arrays are empty.
                 if ((grantResults.isNotEmpty() &&
-                        grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                            grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 ) {
                     // Permission is granted. Continue the action or workflow
                     // in your app.
@@ -505,18 +509,21 @@ class MainActivity : AppCompatActivity(), Logging,
         supportActionBar?.setDisplayShowTitleEnabled(false)
     }
 
-    private fun updateConnectionStatusImage(connected: MeshService.ConnectionState) {
+    private fun updateConnectionStatusImage(connected: MeshServiceHelper.ConnectionState) {
 
         if (model.actionBarMenu == null)
             return
 
         val (image, tooltip) = when (connected) {
-            MeshService.ConnectionState.CONNECTED -> Pair(R.drawable.cloud_on, R.string.connected)
-            MeshService.ConnectionState.DEVICE_SLEEP -> Pair(
+            MeshServiceHelper.ConnectionState.CONNECTED -> Pair(
+                R.drawable.cloud_on,
+                R.string.connected
+            )
+            MeshServiceHelper.ConnectionState.DEVICE_SLEEP -> Pair(
                 R.drawable.ic_twotone_cloud_upload_24,
                 R.string.device_sleeping
             )
-            MeshService.ConnectionState.DISCONNECTED -> Pair(
+            MeshServiceHelper.ConnectionState.DISCONNECTED -> Pair(
                 R.drawable.cloud_off,
                 R.string.disconnected
             )
@@ -550,7 +557,7 @@ class MainActivity : AppCompatActivity(), Logging,
                 requestedChannelUrl = appLinkData
 
                 // if the device is connected already, process it now
-                if (model.isConnected.value == MeshService.ConnectionState.CONNECTED)
+                if (model.isConnected.value == MeshServiceHelper.ConnectionState.CONNECTED)
                     perhapsChangeChannel()
 
                 // We now wait for the device to connect, once connected, we ask the user if they want to switch to the new channel
@@ -614,7 +621,11 @@ class MainActivity : AppCompatActivity(), Logging,
 
                     // ... Continue interacting with the paired device.
                     model.meshService?.let { service ->
-                        MeshService.changeDeviceAddress(this@MainActivity, service, device.address)
+                        MeshServiceCompanion.changeDeviceAddress(
+                            this@MainActivity,
+                            service,
+                            device.address
+                        )
                     }
                 }
 
@@ -660,10 +671,10 @@ class MainActivity : AppCompatActivity(), Logging,
     private fun registerMeshReceiver() {
         unregisterMeshReceiver()
         val filter = IntentFilter()
-        filter.addAction(MeshService.ACTION_MESH_CONNECTED)
-        filter.addAction(MeshService.ACTION_NODE_CHANGE)
-        filter.addAction(MeshService.actionReceived(Portnums.PortNum.TEXT_MESSAGE_APP_VALUE))
-        filter.addAction((MeshService.ACTION_MESSAGE_STATUS))
+        filter.addAction(MeshServiceHelperImp.ACTION_MESH_CONNECTED)
+        filter.addAction(MeshServiceHelperImp.ACTION_NODE_CHANGE)
+        filter.addAction(MeshServiceHelperImp.actionReceived(Portnums.PortNum.TEXT_MESSAGE_APP_VALUE))
+        filter.addAction((MeshServiceHelperImp.ACTION_MESSAGE_STATUS))
         registerReceiver(meshServiceReceiver, filter)
         receiverRegistered = true
     }
@@ -719,10 +730,10 @@ class MainActivity : AppCompatActivity(), Logging,
     }
 
     /// Called when we gain/lose a connection to our mesh radio
-    private fun onMeshConnectionChanged(connected: MeshService.ConnectionState) {
+    private fun onMeshConnectionChanged(connected: MeshServiceHelper.ConnectionState) {
         debug("connchange ${model.isConnected.value} -> $connected")
 
-        if (connected == MeshService.ConnectionState.CONNECTED) {
+        if (connected == MeshServiceHelper.ConnectionState.CONNECTED) {
             model.meshService?.let { service ->
 
                 val oldConnection = model.isConnected.value
@@ -743,7 +754,7 @@ class MainActivity : AppCompatActivity(), Logging,
                             if (!isUpdating) {
                                 val curVer = DeviceVersion(info.firmwareVersion ?: "0.0.0")
 
-                                if (curVer < MeshService.minFirmwareVersion)
+                                if (curVer < MeshServiceCompanion.minFirmwareVersion)
                                     showAlert(R.string.firmware_too_old, R.string.firmware_old)
                                 else {
                                     // If our app is too old/new, we probably don't understand the new radioconfig messages, so we don't read them until here
@@ -845,7 +856,7 @@ class MainActivity : AppCompatActivity(), Logging,
                 debug("Received from mesh service $intent")
 
                 when (intent.action) {
-                    MeshService.ACTION_NODE_CHANGE -> {
+                    MeshServiceHelperImp.ACTION_NODE_CHANGE -> {
                         val info: NodeInfo =
                             intent.getParcelableExtra(EXTRA_NODEINFO)!!
                         debug("UI nodechange $info")
@@ -857,7 +868,7 @@ class MainActivity : AppCompatActivity(), Logging,
                         }
                     }
 
-                    MeshService.actionReceived(Portnums.PortNum.TEXT_MESSAGE_APP_VALUE) -> {
+                    MeshServiceHelperImp.actionReceived(Portnums.PortNum.TEXT_MESSAGE_APP_VALUE) -> {
                         debug("received new message from service")
                         val payload =
                             intent.getParcelableExtra<DataPacket>(EXTRA_PAYLOAD)!!
@@ -865,7 +876,7 @@ class MainActivity : AppCompatActivity(), Logging,
                         model.messagesState.addMessage(payload)
                     }
 
-                    MeshService.ACTION_MESSAGE_STATUS -> {
+                    MeshServiceHelperImp.ACTION_MESSAGE_STATUS -> {
                         debug("received message status from service")
                         val id = intent.getIntExtra(EXTRA_PACKET_ID, 0)
                         val status = intent.getParcelableExtra<MessageStatus>(EXTRA_STATUS)!!
@@ -873,10 +884,10 @@ class MainActivity : AppCompatActivity(), Logging,
                         model.messagesState.updateStatus(id, status)
                     }
 
-                    MeshService.ACTION_MESH_CONNECTED -> {
+                    MeshServiceHelperImp.ACTION_MESH_CONNECTED -> {
                         val extra = intent.getStringExtra(EXTRA_CONNECTED)
                         if (extra != null) {
-                            onMeshConnectionChanged(MeshService.ConnectionState.valueOf(extra))
+                            onMeshConnectionChanged(MeshServiceHelper.ConnectionState.valueOf(extra))
                         }
                     }
                     else -> TODO()
@@ -951,11 +962,11 @@ class MainActivity : AppCompatActivity(), Logging,
 
                     model.messagesState.setMessages(msgs)
                     val connectionState =
-                        MeshService.ConnectionState.valueOf(service.connectionState())
+                        MeshServiceHelper.ConnectionState.valueOf(service.connectionState())
 
                     // if we are not connected, onMeshConnectionChange won't fetch nodes from the service
                     // in that case, we do it here - because the service certainly has a better idea of node db that we have
-                    if (connectionState != MeshService.ConnectionState.CONNECTED)
+                    if (connectionState != MeshServiceHelper.ConnectionState.CONNECTED)
                         updateNodesFromDevice()
 
                     // We won't receive a notify for the initial state of connection, so we force an update here
@@ -964,7 +975,7 @@ class MainActivity : AppCompatActivity(), Logging,
                     // If we get an exception while reading our service config, the device might have gone away, double check to see if we are really connected
                     errormsg("Device error during init ${ex.message}")
                     model.isConnected.value =
-                        MeshService.ConnectionState.valueOf(service.connectionState())
+                        MeshServiceHelper.ConnectionState.valueOf(service.connectionState())
                 } finally {
                     connectionJob = null
                 }
@@ -999,7 +1010,7 @@ class MainActivity : AppCompatActivity(), Logging,
         // ALSO bind so we can use the api
         mesh.connect(
             this,
-            MeshService.createIntent(),
+            IntentUtil.getMeshIntent(),
             Context.BIND_AUTO_CREATE + Context.BIND_ABOVE_CLIENT
         )
     }

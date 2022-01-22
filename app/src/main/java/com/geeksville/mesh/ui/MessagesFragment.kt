@@ -20,10 +20,10 @@ import com.geeksville.android.Logging
 import com.geeksville.mesh.DataPacket
 import com.geeksville.mesh.MessageStatus
 import com.geeksville.mesh.R
+import com.geeksville.mesh.base.helper.MeshServiceHelper
 import com.geeksville.mesh.databinding.AdapterMessageLayoutBinding
 import com.geeksville.mesh.databinding.MessagesFragmentBinding
 import com.geeksville.mesh.model.UIViewModel
-import com.geeksville.mesh.service.MeshService
 import com.google.android.material.chip.Chip
 import java.text.DateFormat
 import java.util.*
@@ -280,7 +280,7 @@ class MessagesFragment : ScreenFragment("Messages"), Logging {
         // If connection state _OR_ myID changes we have to fix our ability to edit outgoing messages
         fun updateTextEnabled() {
             binding.textInputLayout.isEnabled =
-                model.isConnected.value != MeshService.ConnectionState.DISCONNECTED
+                model.isConnected.value != MeshServiceHelper.ConnectionState.DISCONNECTED
 
         // Just being connected is enough to allow sending texts I think
         // && model.nodeDB.myId.value != null && model.radioConfig.value != null

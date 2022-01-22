@@ -10,10 +10,10 @@ import androidx.lifecycle.Observer
 import com.geeksville.android.Logging
 import com.geeksville.android.hideKeyboard
 import com.geeksville.mesh.R
+import com.geeksville.mesh.base.helper.MeshServiceHelper
 import com.geeksville.mesh.databinding.AdvancedSettingsBinding
 import com.geeksville.mesh.model.ChannelOption
 import com.geeksville.mesh.model.UIViewModel
-import com.geeksville.mesh.service.MeshService
 import com.geeksville.util.exceptionToSnackbar
 import com.google.android.material.snackbar.Snackbar
 
@@ -43,7 +43,7 @@ class AdvancedSettingsFragment : ScreenFragment("Advanced Settings"), Logging {
         })
 
         model.isConnected.observe(viewLifecycleOwner, Observer { connectionState ->
-            val connected = connectionState == MeshService.ConnectionState.CONNECTED
+            val connected = connectionState == MeshServiceHelper.ConnectionState.CONNECTED
             binding.positionBroadcastPeriodView.isEnabled = connected
             binding.lsSleepView.isEnabled = connected
             binding.isAlwaysPoweredCheckbox.isEnabled = connected
