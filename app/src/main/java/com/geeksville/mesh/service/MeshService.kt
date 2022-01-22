@@ -3,7 +3,6 @@ package com.geeksville.mesh.service
 import android.annotation.SuppressLint
 import android.app.Service
 import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.os.RemoteException
@@ -20,8 +19,8 @@ import com.geeksville.mesh.android.hasBackgroundPermission
 import com.geeksville.mesh.base.helper.MeshServiceHelper
 import com.geeksville.mesh.base.helper.MeshServiceHelperImp
 import com.geeksville.mesh.common.MeshServiceCompanion
+import com.geeksville.mesh.common.RadioInterfaceBroadcastReceiver
 import com.geeksville.mesh.database.PacketRepository
-import com.geeksville.mesh.database.entity.Packet
 import com.geeksville.util.*
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
@@ -29,8 +28,6 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
-import com.google.protobuf.InvalidProtocolBufferException
-import java.util.*
 
 /**
  * Handles all the communication with android apps.  Also keeps an internal model
@@ -281,70 +278,9 @@ class MeshService : Service() {
      * Receives messages from our BT radio service and processes them to update our model
      * and send to clients as needed.
      */
-    private val radioInterfaceReceiver = object : BroadcastReceiver() {
+    private val radioInterfaceReceiver = RadioInterfaceBroadcastReceiver(meshServiceHelper, this)
 
-        // Important to never throw exceptions out of onReceive
-        override fun onReceive(context: Context, intent: Intent) = exceptionReporter {
-            // NOTE: Do not call handledLaunch here, because it can cause out of order message processing - because each routine is scheduled independently
-            // serviceScope.handledLaunch {
-            debug("Received broadcast ${intent.action}")
-            when (intent.action) {
-                RadioInterfaceService.RADIO_CONNECTED_ACTION -> {
-                    try {
-                        val connected = intent.getBooleanExtra(EXTRA_CONNECTED, false)
-                        val permanent = intent.getBooleanExtra(EXTRA_PERMANENT, false)
-                        meshServiceHelper.onConnectionChanged(
-                            when {
-                                connected -> MeshServiceHelper.ConnectionState.CONNECTED
-                                permanent -> MeshServiceHelper.ConnectionState.DISCONNECTED
-                                else -> MeshServiceHelper.ConnectionState.DEVICE_SLEEP
-                            }
-                        )
-                    } catch (ex: RemoteException) {
-                        // This can happen sometimes (especially if the device is slowly dying due to killing power, don't report to crashlytics
-                        warn("Abandoning reconnect attempt, due to errors during init: ${ex.message}")
-                    }
-                }
-
-                RadioInterfaceService.RECEIVE_FROMRADIO_ACTION -> {
-                    val bytes = intent.getByteArrayExtra(EXTRA_PAYLOAD)!!
-                    try {
-                        val proto =
-                            MeshProtos.FromRadio.parseFrom(bytes)
-                        // info("Received from radio service: ${proto.toOneLineString()}")
-                        when (proto.payloadVariantCase.number) {
-                            MeshProtos.FromRadio.PACKET_FIELD_NUMBER -> meshServiceHelper.handleReceivedMeshPacket(
-                                proto.packet
-                            )
-
-                            MeshProtos.FromRadio.CONFIG_COMPLETE_ID_FIELD_NUMBER -> handleConfigComplete(
-                                proto.configCompleteId
-                            )
-
-                            MeshProtos.FromRadio.MY_INFO_FIELD_NUMBER -> meshServiceHelper.handleMyInfo(
-                                proto.myInfo
-                            )
-
-                            MeshProtos.FromRadio.NODE_INFO_FIELD_NUMBER -> meshServiceHelper.handleNodeInfo(
-                                proto.nodeInfo
-                            )
-
-                            // MeshProtos.FromRadio.RADIO_FIELD_NUMBER -> handleRadioConfig(proto.radio)
-
-                            else -> errormsg("Unexpected FromRadio variant")
-                        }
-                    } catch (ex: InvalidProtocolBufferException) {
-                        errormsg("Invalid Protobuf from radio, len=${bytes.size}", ex)
-                    }
-                }
-
-                else -> errormsg("Unexpected radio interface broadcast")
-            }
-        }
-    }
-
-
-    private fun sendAnalytics() {
+    fun sendAnalytics() {
         val myInfo = meshServiceHelper.getRawMyNodeInfo()
         val mi = meshServiceHelper.getNodeInfo()
         if (myInfo != null && mi != null) {
@@ -371,34 +307,6 @@ class MeshService : Service() {
             }
         }
     }
-
-    private fun handleConfigComplete(configCompleteId: Int) {
-        if (configCompleteId == meshServiceHelper.getConfigNonce()) {
-
-            val packetToSave = Packet(
-                UUID.randomUUID().toString(),
-                "ConfigComplete",
-                System.currentTimeMillis(),
-                configCompleteId.toString()
-            )
-            meshServiceHelper.insertPacket(packetToSave)
-
-            // This was our config request
-            if (meshServiceHelper.getNewMyNodeInfo() == null
-                || meshServiceHelper.getNewNodes().isEmpty()
-            )
-                errormsg("Did not receive a valid config")
-            else {
-                meshServiceHelper.discardNodeDB()
-                debug("Installing new node DB")
-                meshServiceHelper.setNodeInfo(meshServiceHelper.getNewMyNodeInfo()) // Install myNodeInfo as current
-                meshServiceHelper.addNewNodes()
-                sendAnalytics()
-            }
-        } else
-            warn("Ignoring stale config complete")
-    }
-
 
     private val binder = object : IMeshService.Stub() {
 
@@ -542,27 +450,10 @@ class MeshService : Service() {
 
     }
 
-//    fun startMeshService(context: Context) {
-//        startService(context)
-//    }
-
     fun getRadioInterfaceReceiver(): BroadcastReceiver {
         return radioInterfaceReceiver
     }
 
-//    fun connectToRadio() {
-//        // we listen for messages from the radio receiver _before_ trying to create the service
-//        val filter = IntentFilter().apply {
-//            addAction(RadioInterfaceService.RECEIVE_FROMRADIO_ACTION)
-//            addAction(RadioInterfaceService.RADIO_CONNECTED_ACTION)
-//        }
-//        registerReceiver(getRadioInterfaceReceiver(), filter)
-//
-//        // We in turn need to use the radiointerface service
-//        val intent = Intent(MeshService@this, RadioInterfaceService::class.java)
-//        // intent.action = IMeshService::class.java.name
-//        radio.connect(MeshService@this, intent, Context.BIND_AUTO_CREATE)
-//    }
 
     companion object : Logging
 }
