@@ -159,8 +159,10 @@ class MeshService : Service() {
     }
 
     /// Safely access the radio service, if not connected an exception will be thrown
-    private val connectedRadio: IRadioInterfaceService =
-        meshServiceHelper.getRadioInterfaceService(radio)
+    private val connectedRadio: IRadioInterfaceService
+        get() = (if (meshServiceHelper.getConnectionState() == MeshServiceHelper.ConnectionState.CONNECTED) radio.serviceP else null)
+            ?: throw RadioNotConnectedException()
+
 
     fun getConnectionRadio(): IRadioInterfaceService {
         return connectedRadio
@@ -547,6 +549,20 @@ class MeshService : Service() {
     fun getRadioInterfaceReceiver(): BroadcastReceiver {
         return radioInterfaceReceiver
     }
+
+//    fun connectToRadio() {
+//        // we listen for messages from the radio receiver _before_ trying to create the service
+//        val filter = IntentFilter().apply {
+//            addAction(RadioInterfaceService.RECEIVE_FROMRADIO_ACTION)
+//            addAction(RadioInterfaceService.RADIO_CONNECTED_ACTION)
+//        }
+//        registerReceiver(getRadioInterfaceReceiver(), filter)
+//
+//        // We in turn need to use the radiointerface service
+//        val intent = Intent(MeshService@this, RadioInterfaceService::class.java)
+//        // intent.action = IMeshService::class.java.name
+//        radio.connect(MeshService@this, intent, Context.BIND_AUTO_CREATE)
+//    }
 
     companion object : Logging
 }

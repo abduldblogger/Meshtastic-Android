@@ -1,7 +1,6 @@
 package com.geeksville.mesh.base.helper
 
 import android.content.Intent
-import com.geeksville.android.ServiceClient
 import com.geeksville.mesh.*
 import com.geeksville.mesh.database.PacketRepository
 import com.geeksville.mesh.database.entity.Packet
@@ -25,7 +24,6 @@ interface MeshServiceHelper {
     fun setLocationIntervalMsec(locationInterval: Long)
     fun warnUserAboutLocation()
     fun getConnectionState(): ConnectionState
-    fun getRadioInterfaceService(radioInterfaceService: ServiceClient<IRadioInterfaceService>): IRadioInterfaceService
     fun sendToRadio(p: MeshProtos.ToRadio.Builder, requireConnected: Boolean = true)
     fun updateMessageNotification(dataPacket: DataPacket)
     fun startForeground()

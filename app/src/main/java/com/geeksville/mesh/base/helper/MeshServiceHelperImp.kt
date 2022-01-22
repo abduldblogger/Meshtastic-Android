@@ -9,7 +9,6 @@ import androidx.core.content.edit
 import com.geeksville.analytics.DataPair
 import com.geeksville.android.GeeksvilleApplication
 import com.geeksville.android.Logging
-import com.geeksville.android.ServiceClient
 import com.geeksville.concurrent.handledLaunch
 import com.geeksville.mesh.*
 import com.geeksville.mesh.common.IntentUtil
@@ -277,11 +276,6 @@ class MeshServiceHelperImp(
         locationIntervalMsec = locationInterval
     }
 
-    override fun getRadioInterfaceService(radioInterfaceService: ServiceClient<IRadioInterfaceService>): IRadioInterfaceService {
-        return (if (getConnectionState() == MeshServiceHelper.ConnectionState.CONNECTED) meshService.radio.serviceP else null)
-            ?: throw RadioNotConnectedException()
-    }
-
     /**
      * Send a mesh packet to the radio, if the radio is not currently connected this function will throw NotConnectedException
      */
@@ -356,7 +350,7 @@ class MeshServiceHelperImp(
             val intent = Intent(meshService, RadioInterfaceService::class.java)
             // intent.action = IMeshService::class.java.name
             meshService.radio.connect(meshService, intent, Context.BIND_AUTO_CREATE)
-
+//            meshService.connectToRadio()
             // the rest of our init will happen once we are in radioConnection.onServiceConnected
         }
     }
