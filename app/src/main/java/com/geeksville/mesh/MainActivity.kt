@@ -45,6 +45,8 @@ import com.geeksville.mesh.android.getBackgroundPermissions
 import com.geeksville.mesh.android.getCameraPermissions
 import com.geeksville.mesh.android.getLocationPermissions
 import com.geeksville.mesh.android.getMissingPermissions
+import com.geeksville.mesh.base.helper.MainActivityHelper
+import com.geeksville.mesh.base.helper.MainActivityHelperImp
 import com.geeksville.mesh.base.helper.MeshServiceHelper
 import com.geeksville.mesh.base.helper.MeshServiceHelperImp
 import com.geeksville.mesh.common.IntentUtil
@@ -134,6 +136,7 @@ class MainActivity : AppCompatActivity(), Logging,
     }
 
     private lateinit var binding: ActivityMainBinding
+    private val mainActivityHelper: MainActivityHelper = MainActivityHelperImp()
 
     // Used to schedule a coroutine in the GUI thread
     private val mainScope = CoroutineScope(Dispatchers.Main + Job())
@@ -466,7 +469,7 @@ class MainActivity : AppCompatActivity(), Logging,
 
         // Handle any intent
         handleIntent(intent)
-
+        mainActivityHelper.askToRate(this)
         // if (!isInTestLab) - very important - even in test lab we must request permissions because we need location perms for some of our tests to pass
         requestPermission()
     }
@@ -571,6 +574,9 @@ class MainActivity : AppCompatActivity(), Logging,
         // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
         // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
         when (requestCode) {
+            RC_SIGN_IN -> {
+                mainActivityHelper.googleSignIn(data)
+            }
             (65536 + RC_SELECT_DEVICE) -> when (resultCode) {
                 Activity.RESULT_OK -> {
                     // User has chosen to pair with the Bluetooth device.
@@ -615,7 +621,6 @@ class MainActivity : AppCompatActivity(), Logging,
             }
         }
     }
-
 
     private var receiverRegistered = false
 
