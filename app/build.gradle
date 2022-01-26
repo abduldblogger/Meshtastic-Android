@@ -42,13 +42,16 @@ android {
             }
             play {
                 dimension = 'default'
-		if (gradle.startParameter.taskNames.size() > 0 && gradle.startParameter.taskNames.get(0).contains("Play")) {
-			apply plugin: 'com.google.gms.google-services'
-			apply plugin: 'com.github.triplet.play'
+                if (gradle.startParameter.taskNames.size() > 0 && gradle.startParameter.taskNames.get(0).contains("Play")) {
+                    apply plugin: 'com.google.gms.google-services'
+                    apply plugin: 'com.github.triplet.play'
 
-			// Apply the Crashlytics Gradle plugin
-			apply plugin: 'com.google.firebase.crashlytics'
-		}
+                    // Apply the Crashlytics Gradle plugin
+                    apply plugin: 'com.google.firebase.crashlytics'
+                }
+            }
+            locmgr {
+                dimension = 'default'
             }
         }
         applicationId "com.geeksville.mesh"
@@ -135,7 +138,6 @@ protobuf {
 
 dependencies {
 
-    implementation 'com.google.android.gms:play-services-base:18.0.1'
     def room_version = '2.4.0'
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
@@ -173,7 +175,7 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version"
 
     // For now I'm not using javalite, because I want JSON printing
-    implementation ('com.google.protobuf:protobuf-java:3.15.8')
+    implementation('com.google.protobuf:protobuf-java:3.15.8')
 
     // For UART access
     // implementation 'com.google.android.things:androidthings:1.0'
@@ -187,9 +189,11 @@ dependencies {
 
     // location services
     playImplementation 'com.google.android.gms:play-services-location:18.0.0'
+    locmgrImplementation 'com.google.android.gms:play-services-location:18.0.0'
 
     // For Google Sign-In (owner name accesss)
     playImplementation 'com.google.android.gms:play-services-auth:20.0.0'
+    locmgrImplementation 'com.google.android.gms:play-services-auth:20.0.0'
 
     // Add the Firebase SDK for Crashlytics.
     playImplementation 'com.google.firebase:firebase-crashlytics:18.2.6'

@@ -11,7 +11,7 @@ import com.google.android.gms.tasks.Task
 import com.vorlonsoft.android.rate.AppRate
 import com.vorlonsoft.android.rate.StoreType
 
-class MainActivityHelperImp : MainActivityHelper {
+class MainActivityHelperImp() : MainActivityHelper {
     override fun askToRate(context: MainActivity) {
         exceptionReporter { // Got one IllegalArgumentException from inside this lib, but we don't want to crash our app because of bugs in this optional feature
 
