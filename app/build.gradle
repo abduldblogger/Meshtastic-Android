@@ -50,9 +50,6 @@ android {
                     apply plugin: 'com.google.firebase.crashlytics'
                 }
             }
-            locmgr {
-                dimension = 'default'
-            }
         }
         applicationId "com.geeksville.mesh"
         minSdkVersion 21 // The oldest emulator image I have tried is 22 (though 21 probably works)
@@ -189,11 +186,9 @@ dependencies {
 
     // location services
     playImplementation 'com.google.android.gms:play-services-location:18.0.0'
-    locmgrImplementation 'com.google.android.gms:play-services-location:18.0.0'
 
     // For Google Sign-In (owner name accesss)
     playImplementation 'com.google.android.gms:play-services-auth:20.0.0'
-    locmgrImplementation 'com.google.android.gms:play-services-auth:20.0.0'
 
     // Add the Firebase SDK for Crashlytics.
     playImplementation 'com.google.firebase:firebase-crashlytics:18.2.6'

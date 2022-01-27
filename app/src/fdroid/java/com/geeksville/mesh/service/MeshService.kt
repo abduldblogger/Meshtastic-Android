@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Intent
+import android.location.Location
 import android.os.IBinder
 import androidx.annotation.UiThread
 import com.geeksville.android.Logging
@@ -25,9 +26,10 @@ import com.geeksville.util.ignoreException
  * Note: this service will go away once all clients are unbound from it.
  * Warning: do not override toString, it causes infinite recursion on some androids (because contextWrapper.getResources calls to string
  */
-class MeshService : Service() {
+class MeshService : Service(), GPSTracker.LocationListener {
     val meshServiceHelper: MeshServiceHelper = MeshServiceHelperImp(this)
     private var packetRepo: PacketRepository? = null
+    lateinit var gpsTracker: GPSTracker
 
     val radio = ServiceClient {
         IRadioInterfaceService.Stub.asInterface(it).apply {
@@ -40,8 +42,6 @@ class MeshService : Service() {
             : ServiceClient<IRadioInterfaceService> {
         return radio
     }
-
-    private var locationIntervalMsec = 0L
 
     /**
      * a periodic callback that perhaps send our position to other nodes.
@@ -72,10 +72,18 @@ class MeshService : Service() {
     @SuppressLint("MissingPermission")
     @UiThread
     private fun startLocationRequests(requestInterval: Long) {
-        // FIXME - currently we don't support location reading without google play
+        if (::gpsTracker.isInitialized) {
+            gpsTracker.setLocationInterval(requestInterval)
+            if (gpsTracker.canGetLocation()) {
+                gpsTracker.registerLocationListener(this)
+            }
+        }
     }
 
     fun stopLocationRequests() {
+        if (::gpsTracker.isInitialized) {
+            gpsTracker.unregisterLocationListener()
+        }
     }
 
     /// Safely access the radio service, if not connected an exception will be thrown
@@ -85,6 +93,7 @@ class MeshService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        gpsTracker = GPSTracker(this)
 
         info("Creating mesh service")
         packetRepo = meshServiceHelper.getPacketRepo()
@@ -187,4 +196,9 @@ class MeshService : Service() {
     private val binder = MeshServiceBinder(meshServiceHelper, this)
 
     companion object : Logging
+
+    override fun onLocationChanged(location: Location) {
+        info("onLocationChanged ${location.latitude}, ${location.longitude} ${location.altitude}")
+        perhapsSendPosition(location.latitude, location.longitude, location.altitude.toInt())
+    }
 }
